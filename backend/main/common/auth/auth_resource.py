@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
-VITE_API_BASE = os.environ.get("VITE_API_BASE", "http://192.168.1.2:5000")
+VITE_API_BASE = os.environ.get("VITE_API_BASE", "https://ecommerce-music-fullstack-project.onrender.com")
 
 
 class UserRegistrationResource(Resource):
