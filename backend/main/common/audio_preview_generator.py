@@ -1,21 +1,16 @@
 import os
 import tempfile
-import subprocess
 from werkzeug.datastructures import FileStorage
 import librosa
 import soundfile as sf
-
-# development
-# FFMPEG_PATH = r"C:\ffmpeg-7.1.1-full_build\ffmpeg-7.1.1-full_build\bin\ffmpeg.exe"
-
-# production
-FFMPEG_PATH = "ffmpeg"  # Use system path (Linux)
+import ffmpeg
 
 def generate_30s_preview(file: FileStorage):
     input_temp = None
     output_temp = None
 
     try:
+        # Save uploaded file to a temporary location
         suffix = os.path.splitext(file.filename)[1]
         input_temp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
         file.save(input_temp.name)
@@ -24,82 +19,59 @@ def generate_30s_preview(file: FileStorage):
         output_path = output_temp.name
         output_temp.close()
 
-        command = [
-            FFMPEG_PATH, "-y",
-            "-i", input_temp.name,
-            "-t", "30",
-            "-acodec", "libmp3lame",
-            "-ab", "192k",
-            output_path
-        ]
-
-        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        if result.returncode != 0:
-            print("FFmpeg failed:\n", result.stderr.decode())
-            return None, None, None, None
+        # Use ffmpeg-python to trim and convert to MP3
+        (
+            ffmpeg
+            .input(input_temp.name)
+            .output(output_path, t=30, acodec='libmp3lame', audio_bitrate='192k')
+            .overwrite_output()
+            .run(capture_stdout=True, capture_stderr=True)
+        )
 
         duration = detect_audio_duration(input_temp.name)
         bpm = detect_bpm(input_temp.name)
 
         return input_temp.name, output_path, duration, bpm
 
+    except ffmpeg.Error as e:
+        print("FFmpeg error:", e.stderr.decode() if hasattr(e, "stderr") else str(e))
+        return None, None, None, None
+
     except Exception as e:
         print("Unexpected error in generate_30s_preview:", str(e))
         return None, None, None, None
 
+
 def detect_audio_format(file_path: str) -> str:
     try:
-        command = [FFMPEG_PATH, "-i", file_path]
-        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        stderr = result.stderr
-
-        for line in stderr.splitlines():
-            if "Input #" in line and "from" in line:
-                parts = line.split(',')
-                if len(parts) > 1:
-                    return parts[1].strip()
+        probe = ffmpeg.probe(file_path)
+        if 'format' in probe and 'format_name' in probe['format']:
+            return probe['format']['format_name']
     except Exception as e:
         print("Audio format detection failed:", str(e))
     return "unknown"
 
+
 def detect_audio_duration(file_path: str) -> str:
     try:
-        command = [
-            FFMPEG_PATH,
-            "-i", file_path
-        ]
-        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        stderr = result.stderr
-
-        for line in stderr.splitlines():
-            if "Duration" in line:
-                parts = line.strip().split(',')
-                if parts:
-                    duration_part = parts[0]
-                    if "Duration:" in duration_part:
-                        return duration_part.split("Duration:")[1].strip()
+        probe = ffmpeg.probe(file_path)
+        if 'format' in probe and 'duration' in probe['format']:
+            seconds = float(probe['format']['duration'])
+            mins = int(seconds // 60)
+            secs = int(seconds % 60)
+            return f"{mins}:{secs:02d}"
     except Exception as e:
         print("Audio duration detection failed:", str(e))
     return "unknown"
 
+
 def detect_bpm(file_path: str) -> str:
     try:
         import numpy as np
-        import librosa
-
-        # y, sr = librosa.load(file_path, sr=None) # for development 
-        y, sr = librosa.load(file_path, sr=None, duration=30) # for render
-        # Use either beat_track or tempo; both return tempo in different formats
-        tempo = librosa.beat.tempo(y=y, sr=sr)  # Returns ndarray
-
-        if isinstance(tempo, (np.ndarray, list)):
-            bpm = int(round(tempo[0]))
-        else:
-            bpm = int(round(tempo))
-
+        y, sr = librosa.load(file_path, sr=None, duration=30)  # only first 30s to reduce memory
+        tempo = librosa.beat.tempo(y=y, sr=sr)
+        bpm = int(round(tempo[0])) if isinstance(tempo, (np.ndarray, list)) else int(round(tempo))
         return str(bpm)
     except Exception as e:
         print("BPM detection failed:", str(e))
         return None
-
