@@ -2,7 +2,7 @@ import os
 import tempfile
 from werkzeug.datastructures import FileStorage
 import librosa
-import soundfile as sf
+import numpy as np
 import ffmpeg
 
 def generate_30s_preview(file: FileStorage):
@@ -15,11 +15,15 @@ def generate_30s_preview(file: FileStorage):
         input_temp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
         file.save(input_temp.name)
 
+        # Optional: skip large files (>10MB)
+        if os.path.getsize(input_temp.name) > 10 * 1024 * 1024:
+            raise Exception("Uploaded file is too large. Max 10MB allowed.")
+
+        # Generate preview (first 30s) to MP3
         output_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
         output_path = output_temp.name
         output_temp.close()
 
-        # Use ffmpeg-python to trim and convert to MP3
         (
             ffmpeg
             .input(input_temp.name)
@@ -65,12 +69,13 @@ def detect_audio_duration(file_path: str) -> str:
     return "unknown"
 
 
+# ✅ Memory-safe, numba-free BPM detection
 def detect_bpm(file_path: str) -> str:
     try:
-        y, sr = librosa.load(file_path, sr=22050, duration=10, mono=True)  # 10s max
+        y, sr = librosa.load(file_path, sr=22050, duration=10, mono=True)
         onset_env = librosa.onset.onset_strength(y=y, sr=sr)
-        tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=sr, aggregate=None)
-        bpm = int(round(float(tempo[0]))) if tempo is not None and len(tempo) > 0 else 0
+        tempo_estimate = np.count_nonzero(onset_env > np.mean(onset_env)) / 10 * 60
+        bpm = int(round(tempo_estimate))
         return str(bpm)
     except Exception as e:
         print("BPM detection failed:", str(e))
