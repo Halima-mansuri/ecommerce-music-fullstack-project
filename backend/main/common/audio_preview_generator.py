@@ -68,7 +68,7 @@ def detect_audio_duration(file_path: str) -> str:
 def detect_bpm(file_path: str) -> str:
     try:
         import numpy as np
-        y, sr = librosa.load(file_path, sr=None, duration=30, mono=True)  # only first 30s to reduce memory
+        y, sr = librosa.load(file_path, sr=None, duration=10, mono=True)  # only first 30s to reduce memory
         tempo = librosa.beat.tempo(y=y, sr=sr)
         bpm = int(round(tempo[0])) if isinstance(tempo, (np.ndarray, list)) else int(round(tempo))
         return str(bpm)
