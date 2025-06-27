@@ -5,7 +5,11 @@ from werkzeug.datastructures import FileStorage
 import librosa
 import soundfile as sf
 
-FFMPEG_PATH = r"C:\ffmpeg-7.1.1-full_build\ffmpeg-7.1.1-full_build\bin\ffmpeg.exe"
+# development
+# FFMPEG_PATH = r"C:\ffmpeg-7.1.1-full_build\ffmpeg-7.1.1-full_build\bin\ffmpeg.exe"
+
+# production
+FFMPEG_PATH = "ffmpeg"  # Use system path (Linux)
 
 def generate_30s_preview(file: FileStorage):
     input_temp = None
