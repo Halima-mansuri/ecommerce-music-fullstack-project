@@ -15,18 +15,23 @@ import {
   useToast,
   useColorModeValue,
   Badge,
+  TableContainer,
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 
+const API_BASE = import.meta.env.VITE_API_BASE;
+
 const Payout = () => {
   const { userRole, user } = useAuth();
   const toast = useToast();
+
   const [payouts, setPayouts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState(''); // '', 'pending', or 'paid'
+  const [statusFilter, setStatusFilter] = useState('');
 
-  const bgTable = useColorModeValue('purple.50', 'gray.800');
+  const bg = useColorModeValue('purple.100', 'gray.700');
+  const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const textColor = useColorModeValue('purple.700', 'purple.100');
 
@@ -41,7 +46,7 @@ const Payout = () => {
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
-        let url = `http://localhost:5000/seller/payouts`;
+        let url = `${API_BASE}/seller/payouts`;
         if (statusFilter) {
           url += `?status=${statusFilter}`;
         }
@@ -61,7 +66,6 @@ const Payout = () => {
           setPayouts([]);
         }
       } catch (error) {
-        console.error(error);
         toast({
           title: 'Error fetching payouts',
           status: 'error',
@@ -80,7 +84,7 @@ const Payout = () => {
   if (loading) {
     return (
       <VStack py={10}>
-        <Spinner size="xl" />
+        <Spinner size="xl" color="purple.500" />
         <Text>Loading payouts...</Text>
       </VStack>
     );
@@ -95,52 +99,73 @@ const Payout = () => {
   }
 
   return (
-    <Box p={[4, 6]} bg={bgTable} rounded="lg" shadow="md" maxW="900px" mx="auto" mt={6}>
-      <Heading siz="lg" color={textColor} textAlign="center" mb={4}>Your Payouts</Heading>
+    <Box py={[6, 10]} px={[4, 6, 8]} bg={bg} minH="100vh">
+      <Box
+        maxW="6xl"
+        mx="auto"
+        bg={cardBg}
+        p={[4, 6, 8]}
+        rounded="lg"
+        shadow="md"
+        border="1px"
+        borderColor={borderColor}
+      >
+        <Heading size="lg" color={textColor} textAlign="center" mb={6}>
+          Your Payouts
+        </Heading>
 
-      <Box mb={6} maxW="200px">
-        <Select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          placeholder="Filter by status"
-        >
-          <option value="pending">Pending</option>
-          <option value="paid">Paid</option>
-        </Select>
-      </Box>
-
-      {payouts.length === 0 ? (
-        <Text>No payouts found{statusFilter ? ` for status "${statusFilter}"` : ''}.</Text>
-      ) : (
-        <Box overflowX="auto">
-          <Table variant="simple" size="lg" border="1px" borderColor={borderColor} rounded="md">
-            <Thead bg={useColorModeValue('gray.100', 'gray.700')}>
-              <Tr>
-                <Th>ID</Th>
-                <Th isNumeric>Amount ($)</Th>
-                <Th>Status</Th>
-                <Th>Date</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {payouts.map(({ id, amount, status, date }) => (
-                <Tr key={id}>
-                  <Td>{id}</Td>
-                  <Td isNumeric>{amount.toFixed(2)}</Td>
-                  <Td>
-                    <Badge
-                      colorScheme={status === 'paid' ? 'green' : status === 'pending' ? 'yellow' : 'gray'}
-                    >
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </Badge>
-                  </Td>
-                  <Td>{new Date(date).toLocaleString()}</Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
+        <Box mb={6} maxW={["100%", "200px"]}>
+          <Select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            placeholder="Filter by status"
+          >
+            <option value="pending">Pending</option>
+            <option value="paid">Paid</option>
+          </Select>
         </Box>
-      )}
+
+        {payouts.length === 0 ? (
+          <Text color="gray.500" fontSize="sm">
+            No payouts found{statusFilter ? ` for status "${statusFilter}"` : ''}.
+          </Text>
+        ) : (
+          <TableContainer overflowX="auto">
+            <Table size="md" variant="simple" minW="600px">
+              <Thead bg={useColorModeValue('purple.100', 'gray.700')}>
+                <Tr>
+                  <Th>ID</Th>
+                  <Th isNumeric>Amount ($)</Th>
+                  <Th>Status</Th>
+                  <Th>Date</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {payouts.map(({ id, amount, status, date }) => (
+                  <Tr key={id}>
+                    <Td>{id}</Td>
+                    <Td isNumeric>{amount.toFixed(2)}</Td>
+                    <Td>
+                      <Badge
+                        colorScheme={
+                          status === 'paid'
+                            ? 'green'
+                            : status === 'pending'
+                            ? 'yellow'
+                            : 'gray'
+                        }
+                      >
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </Badge>
+                    </Td>
+                    <Td>{new Date(date).toLocaleString()}</Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </TableContainer>
+        )}
+      </Box>
     </Box>
   );
 };

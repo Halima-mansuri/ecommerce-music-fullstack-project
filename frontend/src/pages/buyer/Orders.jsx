@@ -17,7 +17,7 @@ import {
   ModalCloseButton,
   ModalBody,
   useDisclosure,
-  Center,
+  Container,
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
@@ -27,6 +27,7 @@ import { motion } from 'framer-motion';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import OrderDetails from './OrderDetails';
 
+const API_BASE = import.meta.env.VITE_API_BASE;
 const MotionBox = motion(Box);
 
 const Orders = () => {
@@ -38,23 +39,20 @@ const Orders = () => {
   const navigate = useNavigate();
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const cardBg = useColorModeValue('purple.100', 'gray.600');
-  const cardBorder = useColorModeValue('gray.200', 'gray.700');
-  const textSecondary = useColorModeValue('gray.600', 'gray.400');
+  const cardBg = useColorModeValue('purple.100', 'gray.700');
+  const cardBorder = useColorModeValue('gray.200', 'gray.600');
+  const textSecondary = useColorModeValue('gray.600', 'gray.300');
   const textColor = useColorModeValue('purple.800', 'purple.100');
 
   useEffect(() => {
-    if (orderId) {
-      onOpen();
-    } else {
-      onClose();
-    }
+    if (orderId) onOpen();
+    else onClose();
   }, [orderId, onOpen, onClose]);
 
   const fetchOrders = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`http://localhost:5000/buyer/order`, {
+      const res = await axios.get(`${API_BASE}/buyer/order`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -69,7 +67,6 @@ const Orders = () => {
         });
       }
     } catch (err) {
-      console.error(err);
       toast({
         title: 'Error fetching orders.',
         status: 'error',
@@ -82,9 +79,7 @@ const Orders = () => {
   };
 
   useEffect(() => {
-    if (user && userRole === 'buyer') {
-      fetchOrders();
-    }
+    if (user && userRole === 'buyer') fetchOrders();
   }, [user, userRole]);
 
   const handleCloseModal = () => {
@@ -93,29 +88,30 @@ const Orders = () => {
 
   if (loading) {
     return (
-      <VStack py={10}>
+      <VStack py={10} minH="50vh" justify="center">
         <Spinner size="xl" />
-        <Text>Loading your orders...</Text>
+        <Text mt={2}>Loading your orders...</Text>
       </VStack>
     );
   }
 
   if (orders.length === 0) {
     return (
-      <Box p={6}>
-        <Heading size="lg" mb={4}>
+      <Container maxW="container.md" py={10}>
+        <Heading size="lg" mb={4} textAlign="center">
           Your Orders
         </Heading>
-        <Text>No orders found.</Text>
-      </Box>
+        <Text textAlign="center">No orders found.</Text>
+      </Container>
     );
   }
 
   return (
-    <Box p={6}>
+    <Container maxW="container.lg" py={8}>
       <Heading color={textColor} textAlign="center" size="lg" mb={6}>
         Your Orders
       </Heading>
+
       <VStack spacing={6} align="stretch">
         {orders.map((order, i) => (
           <MotionBox
@@ -134,7 +130,7 @@ const Orders = () => {
             whileHover={{ scale: 1.02 }}
             style={{ textDecoration: 'none', color: 'inherit' }}
           >
-            <HStack justify="space-between" mb={2}>
+            <HStack justify="space-between" flexWrap="wrap" mb={2}>
               <Text fontWeight="bold" fontSize="md">
                 Order #{order.order_id}
               </Text>
@@ -156,14 +152,13 @@ const Orders = () => {
               {format(new Date(order.created_at), 'MMM d, yyyy h:mm a')}
             </Text>
 
-            <HStack mb={2}>
+            <HStack mb={2} spacing={2} flexWrap="wrap">
               <FaDollarSign />
               <Text fontWeight="semibold">Total: ${order.total_price.toFixed(2)}</Text>
+              <Text fontSize="sm" color={textSecondary}>
+                Payment Method: {order.payment_method}
+              </Text>
             </HStack>
-
-            <Text fontSize="sm" color={textSecondary}>
-              Payment Method: {order.payment_method}
-            </Text>
 
             <Divider my={3} />
 
@@ -194,7 +189,7 @@ const Orders = () => {
           </ModalBody>
         </ModalContent>
       </Modal>
-    </Box>
+    </Container>
   );
 };
 

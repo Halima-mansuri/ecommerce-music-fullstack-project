@@ -11,7 +11,7 @@ import {
 } from '@chakra-ui/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../context/AuthContext'; // Adjust the path as needed
+import { useAuth } from '../../context/AuthContext'; // Adjust path as needed
 
 const MotionBox = motion(Box);
 const MotionVStack = motion(VStack);
@@ -26,7 +26,7 @@ const NotFound = () => {
     'linear(to-br, gray.700, red.900)'
   );
 
-  const cardBg = useColorModeValue('whiteAlpha.800', 'blackAlpha.500');
+  const cardBg = useColorModeValue('whiteAlpha.900', 'gray.800');
   const headingColor = useColorModeValue('purple.700', 'red.300');
   const textColor = useColorModeValue('gray.600', 'gray.300');
 
@@ -43,15 +43,18 @@ const NotFound = () => {
       display="flex"
       alignItems="center"
       justifyContent="center"
-      px={6}
+      px={[4, 6, 8]}
+      py={[8, 10]}
     >
       <MotionVStack
-        spacing={6}
+        spacing={[6, 8]}
         bg={cardBg}
-        p={10}
+        p={[6, 8, 10]}
         borderRadius="2xl"
         textAlign="center"
         boxShadow="2xl"
+        maxW={['100%', '90%', '700px']}
+        w="full"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6 }}
@@ -59,23 +62,27 @@ const NotFound = () => {
         <MotionImage
           src="/404.png"
           alt="Page Not Found"
-          boxSize="250px"
+          boxSize={['180px', '220px', '250px']}
           objectFit="contain"
           initial={{ rotate: -5 }}
           animate={{ rotate: 0 }}
           transition={{ type: 'spring', stiffness: 100 }}
         />
 
-        <Heading fontSize="4xl" color={headingColor}>
+        <Heading fontSize={['2xl', '3xl', '4xl']} color={headingColor}>
           Oops! Page Not Found
         </Heading>
 
-        <Text fontSize="lg" color={textColor} maxW="500px">
+        <Text fontSize={['md', 'lg']} color={textColor} px={[2, 4]}>
           The page you're looking for doesn't exist or has been moved. Let's get you back on track.
         </Text>
 
-        <HStack pt={4} spacing={4}>
-          <Button colorScheme="purple" onClick={handleBack}>
+        <HStack pt={4} spacing={4} flexWrap="wrap" justify="center">
+          <Button
+            colorScheme="purple"
+            onClick={handleBack}
+            w={['100%', 'auto']}
+          >
             {userRole === 'seller'
               ? 'Go to Dashboard'
               : userRole === 'buyer'
@@ -85,7 +92,7 @@ const NotFound = () => {
 
           {!userRole && (
             <Link to="/login">
-              <Button variant="outline" colorScheme="purple">
+              <Button variant="outline" colorScheme="purple" w={['100%', 'auto']}>
                 Sign In
               </Button>
             </Link>

@@ -1,82 +1,139 @@
-import { Box, Button, Heading, Text, VStack, Image, HStack, useColorModeValue } from '@chakra-ui/react';
+import {
+  Box,
+  Button,
+  Heading,
+  Text,
+  VStack,
+  Image,
+  Stack,
+  useColorModeValue,
+  Flex,
+} from '@chakra-ui/react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext'; // ✅ Auth context
 
 const MotionBox = motion(Box);
 const MotionVStack = motion(VStack);
 const MotionImage = motion(Image);
 
 const Home = () => {
-  // Use color mode aware colors
+  const { user, userRole } = useAuth(); // ✅ user.name and userRole
+
   const bgGradient = useColorModeValue(
-    'linear(to-br, purple.100, purple.100)',      // light mode gradient
-    'linear(to-br, gray.500, purple.900)'       // dark mode gradient
+    'linear(to-br, purple.100, purple.100)',
+    'linear(to-br, gray.500, purple.900)'
   );
 
-  const cardBg = useColorModeValue(
-    'whiteAlpha.700',   // light mode: translucent white
-    'blackAlpha.400'    // dark mode: translucent black
-  );
-
+  const cardBg = useColorModeValue('whiteAlpha.700', 'blackAlpha.400');
   const headingColor = useColorModeValue('gray.800', 'gray.100');
   const textColor = useColorModeValue('gray.600', 'gray.300');
 
+  const roleLinks = {
+    buyer: { to: '/products', label: 'Start Exploring Music' },
+    seller: { to: '/dashboard', label: 'Go to Seller Dashboard' },
+    admin: { to: '/admindashboard', label: 'Go to Admin Dashboard' },
+  };
+
   return (
-    <Box
-      minH="100vh"
+    <Flex
+      minH="90vh"
       bgGradient={bgGradient}
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      px={6}
+      align="center"
+      justify="center"
+      px={{ base: 4, md: 8, lg: 16 }}
+      py={{ base: 8, md: 12 }}
     >
       <MotionVStack
-        spacing={8}
+        spacing={{ base: 6, md: 10 }}
         textAlign="center"
         bg={cardBg}
-        backdropFilter="blur(10px)"
+        backdropFilter="blur(14px)"
         borderRadius="2xl"
-        boxShadow="lg"
-        p={10}
-        maxW="700px"
-        w="100%"
+        boxShadow="dark-lg"
+        p={{ base: 6, md: 10 }}
+        w="full"
+        maxW={{ base: '95%', md: '720px', lg: '960px' }}
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
+        transition={{ duration: 0.6 }}
       >
         <MotionImage
           src="/logo.png"
           alt="Audora Logo"
-          boxSize="200px"
           objectFit="contain"
-          borderRadius="medium"
-          initial={{ scale: 0.8 }}
+          boxSize={{ base: '120px', md: '160px', lg: '200px' }}
+          initial={{ scale: 0.9 }}
           animate={{ scale: 1 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4 }}
         />
 
-        <Heading size="2xl" fontWeight="extrabold" color={headingColor}>
-          Welcome to Audora 🎵
+        <Heading
+          fontSize={{ base: '2xl', md: '4xl', lg: '5xl' }}
+          fontWeight="bold"
+          color={headingColor}
+        >
+          {user ? `Welcome back, ${user.name}!` : 'Welcome to Audora 🎵'}
         </Heading>
 
-        <Text fontSize="lg" color={textColor} px={4}>
+        <Text
+          fontSize={{ base: 'md', md: 'lg', lg: 'xl' }}
+          color={textColor}
+          maxW="640px"
+          mx="auto"
+        >
           Discover, preview, and purchase royalty-free music tracks from talented creators around the world.
         </Text>
 
-        <HStack spacing={4} pt={4}>
-          <Link to="/products">
-            <Button colorScheme="purple" size="lg" px={6}>
-              Browse Music
+        <Stack
+          direction={{ base: 'column', md: 'row' }}
+          spacing={4}
+          pt={4}
+          justify="center"
+          align="center"
+          w="full"
+        >
+          {/* If logged in, show role-based dashboard link */}
+          {userRole ? (
+            <Button
+              as={Link}
+              to={roleLinks[userRole]?.to || '/'}
+              colorScheme="purple"
+              size="lg"
+              px={6}
+              w={{ base: 'full', md: 'auto' }}
+            >
+              {roleLinks[userRole]?.label || 'Continue'}
             </Button>
-          </Link>
-          <Link to="/login">
-            <Button variant="outline" colorScheme="purple" size="lg" px={6}>
-              Sign In / Register
-            </Button>
-          </Link>
-        </HStack>
+          ) : (
+            <>
+              <Button
+                as={Link}
+                to="/products"
+                colorScheme="purple"
+                size="lg"
+                px={6}
+                w={{ base: 'full', md: 'auto' }}
+              >
+                Browse Music
+              </Button>
+
+              <Button
+                as={Link}
+                to="/login"
+                variant="outline"
+                colorScheme="purple"
+                size="lg"
+                px={6}
+                w={{ base: 'full', md: 'auto' }}
+              >
+                Sign In / Register
+              </Button>
+            </>
+          )}
+        </Stack>
       </MotionVStack>
-    </Box>
+    </Flex>
   );
 };
 

@@ -15,9 +15,12 @@ import {
   useColorModeValue,
   Button,
   HStack,
+  TableContainer,
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 const SalesReport = () => {
   const { user, userRole } = useAuth();
@@ -35,12 +38,13 @@ const SalesReport = () => {
   const bgTable = useColorModeValue('gray.50', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const textColor = useColorModeValue('purple.700', 'purple.100');
+  const cardBg = useColorModeValue('white', 'gray.900');
 
   const fetchSalesReport = async (page = 1) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`http://localhost:5000/seller/sales?page=${page}`, {
+      const res = await axios.get(`${API_BASE}/seller/sales?page=${page}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -83,31 +87,40 @@ const SalesReport = () => {
   if (loading) {
     return (
       <VStack py={10}>
-        <Spinner size="xl" />
+        <Spinner size="xl" color="purple.500" />
         <Text>Loading sales report...</Text>
       </VStack>
     );
   }
 
   return (
-    <Box p={[4, 6]} minH="100vh" bg={useColorModeValue('purple.100', 'gray.700')}>
-      <Heading mb={6} color={textColor} size="lg" textAlign="center" >Sales Report</Heading>
-
+    <Box
+      minH="75vh"
+      py={[6, 10]}
+      px={[4, 6, 8]}
+      bg={useColorModeValue('purple.100', 'gray.700')}
+    >
       <Box
-        bg={bgTable}
-        p={5}
+        maxW="6xl"
+        mx="auto"
+        bg={cardBg}
+        p={[4, 6, 8]}
         rounded="lg"
         shadow="md"
         border="1px"
         borderColor={borderColor}
       >
+        <Heading mb={6} color={textColor} fontSize={["xl", "2xl", "3xl"]} textAlign="center">
+          Sales Report
+        </Heading>
+
         {salesData.length === 0 ? (
-          <Text color="gray.500">No sales data available.</Text>
+          <Text color="gray.500" textAlign="center">No sales data available.</Text>
         ) : (
-          <Box overflowX="auto">
-            <Table size="md" variant="simple">
+          <TableContainer overflowX="auto">
+            <Table size="md" variant="simple" minW="600px">
               <Thead>
-                <Tr>
+                <Tr bg={useColorModeValue("purple.100", "gray.700")}>
                   <Th>Product Title</Th>
                   <Th isNumeric>Units Sold</Th>
                   <Th isNumeric>Total Earned</Th>
@@ -123,23 +136,29 @@ const SalesReport = () => {
                 ))}
               </Tbody>
             </Table>
-          </Box>
+          </TableContainer>
         )}
 
         {/* Pagination Controls */}
-        <HStack mt={4} justify="space-between">
+        <HStack mt={6} spacing={4} justify="space-between" flexWrap="wrap">
           <Button
             onClick={() => handlePageChange(pagination.page - 1)}
             isDisabled={pagination.page <= 1}
+            colorScheme="purple"
+            w={["100%", "auto"]}
           >
             Previous
           </Button>
-          <Text>
+
+          <Text fontSize="sm" color={textColor} textAlign="center">
             Page {pagination.page} of {pagination.total_pages}
           </Text>
+
           <Button
             onClick={() => handlePageChange(pagination.page + 1)}
             isDisabled={pagination.page >= pagination.total_pages}
+            colorScheme="purple"
+            w={["100%", "auto"]}
           >
             Next
           </Button>

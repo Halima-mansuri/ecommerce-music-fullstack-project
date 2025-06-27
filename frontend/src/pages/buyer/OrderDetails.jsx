@@ -6,65 +6,78 @@ import {
   Spinner,
   Text,
   VStack,
-  HStack,
+  Stack,
   Divider,
   useToast,
   Badge,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  useColorModeValue,
+  Icon,
 } from '@chakra-ui/react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { FaClock, FaFileInvoice } from 'react-icons/fa';
+import { useCart } from '../../context/CartContext';
+import { FaClock, FaFileInvoice, FaBan, FaRedo } from 'react-icons/fa';
 import { format } from 'date-fns';
+import { motion } from 'framer-motion';
+
+const MotionBox = motion(Box);
+const MotionButton = motion(Button);
+
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 const OrderDetails = () => {
   const { orderId } = useParams();
   const { user, userRole } = useAuth();
+  const { fetchCartCount } = useCart();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [canceling, setCanceling] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const toast = useToast();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!user || userRole !== 'buyer') return;
+  const fetchOrder = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_BASE}/buyer/order/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    const fetchOrder = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(
-          `http://localhost:5000/buyer/order/${orderId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        if (res.data.status === 1) {
-          setOrder(res.data.data);
-        } else {
-          toast({
-            title: res.data.message || 'Unable to fetch order.',
-            status: 'error',
-          });
-        }
-      } catch (err) {
-        console.error(err);
+      if (res.data.status === 1) {
+        setOrder(res.data.data);
+      } else {
         toast({
-          title: 'Failed to fetch order details.',
+          title: res.data.message || 'Unable to fetch order.',
           status: 'error',
         });
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: 'Failed to fetch order details.',
+        status: 'error',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchOrder();
-  }, [user, userRole, orderId, toast]);
+  useEffect(() => {
+    if (user && userRole === 'buyer') {
+      fetchOrder();
+    }
+  }, [user, userRole, orderId]);
 
   const handleDownloadInvoice = async () => {
     try {
       const token = localStorage.getItem('token');
       const res = await axios.get(
-        `http://localhost:5000/buyer/order/${orderId}/invoice`,
+        `${API_BASE}/buyer/order/${orderId}/invoice`,
         {
           headers: { Authorization: `Bearer ${token}` },
           responseType: 'blob',
@@ -86,17 +99,82 @@ const OrderDetails = () => {
       toast({
         title: 'Failed to download invoice.',
         status: 'error',
-        duration: 3000,
-        isClosable: true,
       });
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    try {
+      setCanceling(true);
+      const token = localStorage.getItem('token');
+      const res = await axios.delete(`${API_BASE}/buyer/order/${orderId}/cancel`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.data.status === 1) {
+        toast({
+          title: 'Order cancelled successfully',
+          status: 'success',
+        });
+        fetchOrder();
+        fetchCartCount();
+      } else {
+        toast({
+          title: res.data.message || 'Failed to cancel order.',
+          status: 'error',
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: 'Error cancelling order.',
+        status: 'error',
+      });
+    } finally {
+      setCanceling(false);
+    }
+  };
+
+  const handleRetryCheckout = async () => {
+    try {
+      setRetrying(true);
+      const token = localStorage.getItem('token');
+      const res = await axios.post(
+        `${API_BASE}/buyer/order/${orderId}/retry`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (res.data.status === 1 && res.data.checkout_url) {
+        toast({
+          title: 'Redirecting to payment...',
+          status: 'info',
+        });
+        window.location.href = res.data.checkout_url;
+      } else {
+        toast({
+          title: res.data.message || 'Failed to retry checkout.',
+          status: 'error',
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: 'Error retrying checkout.',
+        status: 'error',
+      });
+    } finally {
+      setRetrying(false);
     }
   };
 
   if (loading) {
     return (
-      <VStack py={10}>
-        <Spinner />
-        <Text>Loading order details...</Text>
+      <VStack py={12} spacing={4}>
+        <Spinner size="xl" thickness="4px" color="purple.400" />
+        <Text fontSize="lg">Loading your order...</Text>
       </VStack>
     );
   }
@@ -104,72 +182,130 @@ const OrderDetails = () => {
   if (!order) {
     return (
       <Box p={6}>
-        <Text>Order not found.</Text>
+        <Alert status="error" variant="left-accent" borderRadius="md">
+          <AlertIcon />
+          <Box>
+            <AlertTitle>Order not found.</AlertTitle>
+            <AlertDescription>
+              Please check the order ID or try again later.
+            </AlertDescription>
+          </Box>
+        </Alert>
       </Box>
     );
   }
 
   return (
-    <Box p={6}>
-      <Heading color={"purple.300"} size="lg" mb={4}>
+    <Box p={{ base: 4, md: 6 }} maxW="5xl" mx="auto">
+      <Heading color="purple.500" mb={4}>
         Order #{order.order_id}
       </Heading>
 
-      <HStack justify="space-between" mb={3}>
-        <Badge
-          colorScheme={
-            order.status === 'paid'
-              ? 'green'
-              : order.status === 'pending'
-              ? 'yellow'
-              : 'red'
-          }
+      <Stack direction={{ base: 'column', md: 'row' }} justify="space-between" mb={4}>
+        <motion.div
+          initial={{ scale: 0.9 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.4 }}
         >
-          {order.status.toUpperCase()}
-        </Badge>
-        <Text fontSize="sm">
-          <FaClock style={{ marginRight: '5px' }} />
-          {format(new Date(order.created_at), 'PPPpp')}
-        </Text>
-      </HStack>
+          <Badge
+            colorScheme={
+              order.status === 'paid'
+                ? 'green'
+                : order.status === 'pending'
+                ? 'yellow'
+                : 'red'
+            }
+            fontSize="sm"
+            px={3}
+            py={1}
+            rounded="full"
+          >
+            {order.status.toUpperCase()}
+          </Badge>
+        </motion.div>
 
-      <Text fontWeight="medium" mb={2}>
-        Payment Method: {order.payment_method}
-      </Text>
+        <Text fontSize="sm" color="gray.500" display="flex" alignItems="center" gap={1}>
+          <FaClock /> {format(new Date(order.created_at), 'PPPpp')}
+        </Text>
+      </Stack>
+
+      <Box mb={2}>
+        <Text fontWeight="medium">
+          Payment Method: <strong>{order.payment_method}</strong>
+        </Text>
+      </Box>
       <Text fontWeight="bold" mb={4}>
         Total: ${order.total_price.toFixed(2)}
       </Text>
 
-      <Divider mb={4} />
-      <Heading size="md" mb={2}>
+      <Divider my={4} />
+      <Heading size="md" mb={3}>
         Items
       </Heading>
-      <VStack align="start" spacing={3}>
+
+      <VStack align="stretch" spacing={4}>
         {order.items.map((item, index) => (
-          <Box key={index}>
+          <MotionBox
+            key={index}
+            p={4}
+            borderWidth="1px"
+            borderRadius="lg"
+            bg={useColorModeValue('purple.50', 'gray.700')}
+            whileHover={{ scale: 1.02 }}
+            transition={{ duration: 0.3 }}
+          >
             <Text fontWeight="semibold">
               {item.product_title} (x{item.quantity})
             </Text>
             <Text fontSize="sm">Price: ${item.price.toFixed(2)}</Text>
-          </Box>
+          </MotionBox>
         ))}
       </VStack>
 
-      <HStack mt={6} spacing={4}>
+      <Stack mt={8} direction={{ base: 'column', md: 'row' }} spacing={4} flexWrap="wrap">
         {order.status === 'paid' && (
-          <Button
+          <MotionButton
             leftIcon={<FaFileInvoice />}
             colorScheme="purple"
+            whileHover={{ scale: 1.05 }}
             onClick={handleDownloadInvoice}
           >
             Download Invoice
-          </Button>
+          </MotionButton>
         )}
 
-        <Button variant="outline" onClick={() => navigate('/orders')}>
+        {order.status === 'pending' && (
+          <>
+            <MotionButton
+              leftIcon={<FaRedo />}
+              colorScheme="purple"
+              isLoading={retrying}
+              onClick={handleRetryCheckout}
+              whileHover={{ scale: 1.05 }}
+            >
+              Retry Checkout
+            </MotionButton>
+
+            <MotionButton
+              leftIcon={<FaBan />}
+              colorScheme="red"
+              isLoading={canceling}
+              onClick={handleCancelOrder}
+              whileHover={{ scale: 1.05 }}
+            >
+              Cancel Order
+            </MotionButton>
+          </>
+        )}
+
+        <MotionButton
+          variant="outline"
+          whileHover={{ scale: 1.05 }}
+          onClick={() => navigate('/orders')}
+        >
           Back to Orders
-        </Button>
-      </HStack>
+        </MotionButton>
+      </Stack>
     </Box>
   );
 };

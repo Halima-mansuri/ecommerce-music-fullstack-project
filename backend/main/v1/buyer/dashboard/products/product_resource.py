@@ -43,7 +43,6 @@ class ProductListResource(Resource):
             "title": p.title,
             "price": p.price,
             "category": p.category,
-            "file_url": p.file_url,
             "preview_url": p.preview_url,
             "preview_image_url": p.preview_image_url,
             "genre": p.genre,
@@ -81,7 +80,6 @@ class ProductDetailResource(Resource):
             "description": product.description,
             "price": product.price,
             "category": product.category,
-            "file_url": product.file_url,
             "preview_url": product.preview_url,
             "preview_image_url": product.preview_image_url,
             "genre": product.genre,
@@ -91,7 +89,9 @@ class ProductDetailResource(Resource):
             "license_type": product.license_type,
             "is_featured": product.is_featured,
             "created_at": product.created_at.isoformat() if product.created_at else None,
-            "available_coupons": coupon_data
+            "available_coupons": coupon_data,
+            "seller_id": product.seller_id,
+            "seller_name": product.seller.name if product.seller else "Unknown"
         }
 
         return {"code": 200, "status": 1, "data": data}, 200

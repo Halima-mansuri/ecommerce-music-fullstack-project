@@ -2,7 +2,7 @@ import os
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
-from main.extension import db
+from main.extension import db, socketio
 from main.config.config import Config
 from main.extension import init_extensions
 from main.config.routes import register_routes

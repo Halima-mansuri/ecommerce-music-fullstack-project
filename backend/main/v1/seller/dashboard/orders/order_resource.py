@@ -10,6 +10,10 @@ class SellerOrdersResource(Resource):
         if role != "seller":
             return {"code": 403, "message": "Unauthorized - seller access only", "status": 0}, 403
 
+        seller = User.query.filter_by(id=user_id, role='seller').first()
+        if not seller or not seller.is_approved:
+            return {"code": 403, "message": "Seller is not approved by admin", "status": 0}, 403
+        
         seller_products = Product.query.filter_by(seller_id=user_id).all()
         product_ids = [p.id for p in seller_products]
 
@@ -55,7 +59,11 @@ class SellerOrderDetailResource(Resource):
     def get(self, user_id, role, order_id):
         if role != "seller":
             return {"code": 403, "message": "Unauthorized - seller access only", "status": 0}, 403
-
+        
+        seller = User.query.filter_by(id=user_id, role='seller').first()
+        if not seller or not seller.is_approved:
+            return {"code": 403, "message": "Seller is not approved by admin", "status": 0}, 403
+        
         seller_products = Product.query.filter_by(seller_id=user_id).all()
         product_ids = [p.id for p in seller_products]
 

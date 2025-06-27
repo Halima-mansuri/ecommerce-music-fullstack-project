@@ -21,13 +21,16 @@ import {
   AlertDialogHeader,
   AlertDialogOverlay,
   useColorModeValue,
-  useBreakpointValue,
   Icon,
+  VStack,
+  useBreakpointValue,
 } from "@chakra-ui/react";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { EditIcon, DeleteIcon, CheckIcon, CloseIcon } from "@chakra-ui/icons";
+
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 const MotionBox = motion(Box);
 const MotionTr = motion(Tr);
@@ -43,15 +46,15 @@ const ManageProducts = () => {
   const cancelRef = useRef();
   const toast = useToast();
 
-  const cardBg = useColorModeValue("purple.100", "whiteAlpha.100");
-  const inputBg = useColorModeValue("gray.100", "gray.700");
+  const cardBg = useColorModeValue("purple.100", "gray.800");
+  const inputBg = useColorModeValue("white", "gray.700");
   const headingColor = useColorModeValue("purple.700", "purple.100");
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/seller/products", {
+      const res = await axios.get(`${API_BASE}/seller/products`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data.status === 1) {
@@ -74,7 +77,7 @@ const ManageProducts = () => {
   const handleDelete = async () => {
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/seller/products/${deleteId}`, {
+      await axios.delete(`${API_BASE}/seller/products/${deleteId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast({ title: "Product deleted", status: "success", isClosable: true });
@@ -105,7 +108,7 @@ const ManageProducts = () => {
       setSaving(true);
       const token = localStorage.getItem("token");
       const payload = { ...editData, price: parseFloat(editData.price) };
-      await axios.put(`http://localhost:5000/seller/products/${productId}`, payload, {
+      await axios.put(`${API_BASE}/seller/products/${productId}`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast({ title: "Product updated", status: "success", isClosable: true });
@@ -140,13 +143,14 @@ const ManageProducts = () => {
 
   return (
     <MotionBox
-      p={6}
+      px={[4, 6, 10]}
+      py={[6, 8]}
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
       <Heading mb={6} size="lg" textAlign="center" color={headingColor}>
-         Manage Your Products
+        Manage Your Products
       </Heading>
 
       <Box
@@ -154,14 +158,14 @@ const ManageProducts = () => {
         rounded="2xl"
         shadow="lg"
         overflowX="auto"
-        p={4}
+        p={[4, 6]}
         border="1px solid"
         borderColor={useColorModeValue("gray.200", "gray.600")}
       >
         {products.length === 0 ? (
-          <Text>No products uploaded yet.</Text>
+          <Text textAlign="center">No products uploaded yet.</Text>
         ) : (
-          <Table variant="simple" size="lg">
+          <Table variant="simple" size="md" minW="600px">
             <Thead>
               <Tr>
                 <Th>Title</Th>
@@ -186,6 +190,7 @@ const ManageProducts = () => {
                         value={editData.title}
                         onChange={handleEditChange}
                         bg={inputBg}
+                        size="sm"
                       />
                     ) : (
                       product.title
@@ -198,6 +203,7 @@ const ManageProducts = () => {
                         value={editData.description}
                         onChange={handleEditChange}
                         bg={inputBg}
+                        size="sm"
                       />
                     ) : (
                       product.description
@@ -212,55 +218,58 @@ const ManageProducts = () => {
                         value={editData.price}
                         onChange={handleEditChange}
                         bg={inputBg}
+                        size="sm"
                       />
                     ) : (
                       `$${product.price.toFixed(2)}`
                     )}
                   </Td>
-                  <Td textAlign="center">
-                    {editingId === product.id ? (
-                      <HStack spacing={2} justify="center">
-                        <Button
-                          size="sm"
-                          colorScheme="green"
-                          leftIcon={<CheckIcon />}
-                          onClick={() => handleEditSave(product.id)}
-                          isDisabled={isSaveDisabled(product)}
-                          isLoading={saving}
-                        >
-                          Save
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          leftIcon={<CloseIcon />}
-                          onClick={() => setEditingId(null)}
-                        >
-                          Cancel
-                        </Button>
-                      </HStack>
-                    ) : (
-                      <HStack spacing={2} justify="center">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          colorScheme="purple"
-                          leftIcon={<EditIcon />}
-                          onClick={() => handleEditClick(product)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          colorScheme="red"
-                          leftIcon={<DeleteIcon />}
-                          onClick={() => setDeleteId(product.id)}
-                        >
-                          Delete
-                        </Button>
-                      </HStack>
-                    )}
+                  <Td>
+                    <HStack spacing={2} justify="center" flexWrap="wrap">
+                      {editingId === product.id ? (
+                        <>
+                          <Button
+                            size="sm"
+                            colorScheme="green"
+                            leftIcon={<CheckIcon />}
+                            onClick={() => handleEditSave(product.id)}
+                            isDisabled={isSaveDisabled(product)}
+                            isLoading={saving}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            leftIcon={<CloseIcon />}
+                            onClick={() => setEditingId(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            colorScheme="purple"
+                            leftIcon={<EditIcon />}
+                            onClick={() => handleEditClick(product)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            colorScheme="red"
+                            leftIcon={<DeleteIcon />}
+                            onClick={() => setDeleteId(product.id)}
+                          >
+                            Delete
+                          </Button>
+                        </>
+                      )}
+                    </HStack>
                   </Td>
                 </MotionTr>
               ))}
@@ -269,15 +278,27 @@ const ManageProducts = () => {
         )}
       </Box>
 
-      {/* Delete Confirmation */}
-      <AlertDialog isOpen={deleteId !== null} leastDestructiveRef={cancelRef} onClose={() => setDeleteId(null)}>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        isOpen={deleteId !== null}
+        leastDestructiveRef={cancelRef}
+        onClose={() => setDeleteId(null)}
+      >
         <AlertDialogOverlay>
           <AlertDialogContent>
-            <AlertDialogHeader fontSize="lg" fontWeight="bold">Delete Product</AlertDialogHeader>
-            <AlertDialogBody>Are you sure you want to delete this product?</AlertDialogBody>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Delete Product
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              Are you sure you want to delete this product?
+            </AlertDialogBody>
             <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={() => setDeleteId(null)}>Cancel</Button>
-              <Button colorScheme="red" onClick={handleDelete} ml={3}>Delete</Button>
+              <Button ref={cancelRef} onClick={() => setDeleteId(null)}>
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={handleDelete} ml={3}>
+                Delete
+              </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialogOverlay>

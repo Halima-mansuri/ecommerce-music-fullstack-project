@@ -124,8 +124,8 @@ class CheckoutResource(Resource):
                     payment_method_types=["card"],
                     line_items=line_items,
                     mode="payment",
-                    success_url="http://localhost:3000/payment/success?session_id={CHECKOUT_SESSION_ID}",
-                    cancel_url="http://localhost:3000/cart",
+                    success_url="http://192.168.1.34:5000/payment/success?session_id={CHECKOUT_SESSION_ID}",
+                    cancel_url="http://192.168.1.34:5000/cart",
                     payment_intent_data={
                         "application_fee_amount": int(order_total * 0.1 * 100),
                         "transfer_data": {

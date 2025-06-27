@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 // Create Cart Context
 const CartContext = createContext();
@@ -18,7 +19,7 @@ export const CartProvider = ({ children }) => {
     if (!user || userRole !== 'buyer') return;
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/buyer/cart/count', {
+      const res = await axios.get(`${API_BASE}/buyer/cart/count`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

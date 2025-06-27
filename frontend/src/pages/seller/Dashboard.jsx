@@ -17,10 +17,13 @@ import {
   Th,
   Td,
   useColorModeValue,
+  Flex,
 } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 const MotionBox = motion(Box);
 const MotionStat = motion(Stat);
@@ -32,6 +35,7 @@ const fadeIn = {
     y: 0,
     transition: {
       delay: i * 0.1,
+      duration: 0.5,
     },
   }),
 };
@@ -44,8 +48,8 @@ const SellerDashboard = () => {
   const [recentSales, setRecentSales] = useState([]);
 
   const textColor = useColorModeValue('purple.700', 'purple.100');
-  const bgBox = useColorModeValue('purple.100', 'gray.700');
-  const bgStat = useColorModeValue('gray.50', 'gray.800');
+  const bgBox = useColorModeValue('purple.50', 'gray.900');
+  const bgStat = useColorModeValue('white', 'gray.700');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
 
   useEffect(() => {
@@ -54,7 +58,7 @@ const SellerDashboard = () => {
     const fetchDashboard = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get(`http://localhost:5000/seller/dashboard`, {
+        const res = await axios.get(`${API_BASE}/seller/dashboard`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -88,7 +92,7 @@ const SellerDashboard = () => {
   if (loading) {
     return (
       <VStack py={10}>
-        <Spinner size="xl" />
+        <Spinner size="xl" color="purple.500" />
         <Text>Loading dashboard...</Text>
       </VStack>
     );
@@ -103,23 +107,24 @@ const SellerDashboard = () => {
   ];
 
   return (
-    <Box p={[4, 6]} bg={bgBox} minH="100vh" rounded="lg">
+    <Box px={[4, 6, 10]} py={[6, 8]} bg={bgBox} borderRadius="lg">
+      {/* Title */}
       <MotionBox initial="hidden" animate="visible" variants={fadeIn} custom={0}>
-        <Heading color={textColor} size="lg" mb={6} textAlign="center">
+        <Heading color={textColor} size="lg" mb={6} textAlign={['center', 'center', 'left']}>
           Seller Dashboard
         </Heading>
       </MotionBox>
 
-      {/* 📊 Summary Stats */}
-      <SimpleGrid columns={[1, 2, 3]} spacing={6} mb={10}>
+      {/* Summary Cards */}
+      <SimpleGrid columns={[1, 2, 3]} spacing={[4, 6, 8]} mb={10}>
         {statItems.map((stat, i) => (
           <MotionStat
             key={stat.label}
             bg={bgStat}
-            p={5}
+            p={[4, 5]}
             rounded="2xl"
             shadow="md"
-            border="1px"
+            border="1px solid"
             borderColor={borderColor}
             variants={fadeIn}
             initial="hidden"
@@ -127,20 +132,22 @@ const SellerDashboard = () => {
             custom={i + 1}
             whileHover={{ scale: 1.03 }}
           >
-            <StatLabel fontWeight="medium">{stat.label}</StatLabel>
-            <StatNumber fontSize="2xl">{stat.value}</StatNumber>
+            <StatLabel fontWeight="medium" fontSize={['sm', 'md']}>
+              {stat.label}
+            </StatLabel>
+            <StatNumber fontSize={['lg', '2xl']}>{stat.value}</StatNumber>
           </MotionStat>
         ))}
       </SimpleGrid>
 
-      {/* 🕒 Recent Product Sales */}
+      {/* Recent Product Sales */}
       <MotionBox
         variants={fadeIn}
         initial="hidden"
         animate="visible"
         custom={6}
         bg={bgStat}
-        p={5}
+        p={[4, 5]}
         rounded="lg"
         shadow="md"
         border="1px"
@@ -154,7 +161,7 @@ const SellerDashboard = () => {
           <Text color="gray.500">No recent sales of active products.</Text>
         ) : (
           <Box overflowX="auto">
-            <Table variant="simple" size="md">
+            <Table variant="simple" size="sm" minW="500px">
               <Thead>
                 <Tr>
                   <Th>Title</Th>

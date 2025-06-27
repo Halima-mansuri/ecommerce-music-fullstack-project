@@ -6,13 +6,21 @@ from werkzeug.utils import secure_filename
 from main.common.jwt_utils import token_required
 from main.common.cloudinary_helper import upload_to_cloudinary
 from main.common.audio_preview_generator import generate_30s_preview, detect_audio_format, detect_audio_duration, detect_bpm
-from main.database.models import db, Product
+from main.database.models import db, Product, User
 
 class UploadProductResource(Resource):
     @token_required
     def post(self, user_id, role):
         if role != "seller":
             return {"code": 403, "message": "Only sellers can upload products", "status": 0}, 403
+
+        # Check if seller is approved
+        seller = User.query.filter_by(id=user_id, role='seller').first()
+        if not seller:
+            return {"code": 404, "message": "Seller not found", "status": 0}, 404
+
+        if not seller.is_approved:
+            return {"code": 403, "message": "Seller account not approved by admin", "status": 0}, 403
 
         title = request.form.get("title")
         description = request.form.get("description")
@@ -152,7 +160,12 @@ class ProductUpdateResource(Resource):
     def put(self, user_id, role, product_id):
         if role != "seller":
             return {"code": 403, "message": "Only sellers can update products", "status": 0}, 403
-
+        
+        # Check if seller is approved
+        seller = User.query.filter_by(id=user_id, role='seller').first()
+        if not seller or not seller.is_approved:
+            return {"code": 403, "message": "Seller not approved to update products", "status": 0}, 403
+        
         product = Product.query.filter_by(id=product_id, seller_id=user_id, is_deleted=False).first()
         if not product:
             return {"code": 404, "message": "Product not found or unauthorized", "status": 0}, 404
@@ -226,7 +239,12 @@ class ProductDeleteResource(Resource):
     def delete(self, user_id, role, product_id):
         if role != "seller":
             return {"code": 403, "message": "Only sellers can delete products", "status": 0}, 403
-
+        
+        # Check if seller is approved
+        seller = User.query.filter_by(id=user_id, role='seller').first()
+        if not seller or not seller.is_approved:
+            return {"code": 403, "message": "Seller not approved to delete products", "status": 0}, 403
+        
         product = Product.query.filter_by(id=product_id, seller_id=user_id, is_deleted=False).first()
         if not product:
             return {"code": 404, "message": "Product not found or unauthorized", "status": 0}, 404

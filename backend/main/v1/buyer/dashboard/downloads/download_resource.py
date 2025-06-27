@@ -16,6 +16,7 @@ class BuyerDownloadListResource(Resource):
         if role != "buyer":
             return {"code": 403, "message": "Unauthorized access", "status": 0}, 403
 
+        # Get all paid order items for this buyer
         order_items = OrderItem.query.join(Order).filter(
             Order.buyer_id == user_id,
             Order.status == "paid"
@@ -39,10 +40,10 @@ class BuyerDownloadListResource(Resource):
                 "order_item_id": item.id,
                 "product_id": product.id,
                 "title": product.title,
-                "file_url": product.file_url,
                 "downloaded": download_count,
                 "remaining_downloads": max(0, MAX_DOWNLOADS_PER_PRODUCT - download_count),
                 "last_download_time": last_download_time
+                # Notice: file_url is intentionally not included for security
             })
 
         return {
@@ -59,6 +60,7 @@ class BuyerDownloadFileResource(Resource):
         if role != "buyer":
             return {"code": 403, "message": "Unauthorized access", "status": 0}, 403
 
+        # Validate ownership and payment status
         item = OrderItem.query.join(Order).filter(
             OrderItem.id == order_item_id,
             Order.buyer_id == user_id,
@@ -72,6 +74,7 @@ class BuyerDownloadFileResource(Resource):
         if not product or not product.file_url:
             return {"code": 404, "message": "File not found", "status": 0}, 404
 
+        # Check download limit
         download_count = DownloadHistory.query.filter_by(
             user_id=user_id, order_item_id=order_item_id
         ).count()
@@ -84,6 +87,7 @@ class BuyerDownloadFileResource(Resource):
             }, 403
 
         try:
+            # Download from Cloudinary
             response = requests.get(product.file_url, stream=True, timeout=10)
             if response.status_code != 200:
                 return {"code": 500, "message": "Failed to retrieve file", "status": 0}, 500
@@ -95,7 +99,7 @@ class BuyerDownloadFileResource(Resource):
             mime_type = mimetypes.types_map.get(f".{file_ext}", "application/octet-stream")
             filename = f"{product.title}.{file_ext}"
 
-            # Log download attempt
+            # Log the download
             download = DownloadHistory(
                 user_id=user_id,
                 product_id=product.id,
@@ -105,6 +109,7 @@ class BuyerDownloadFileResource(Resource):
             db.session.add(download)
             db.session.commit()
 
+            # Stream file to user
             file_like = BytesIO(response.content)
             file_like.seek(0)
             return send_file(

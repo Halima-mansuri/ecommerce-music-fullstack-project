@@ -10,12 +10,15 @@ from dotenv import load_dotenv
 load_dotenv()
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
+VITE_API_BASE = os.environ.get("VITE_API_BASE", "http://192.168.1.2:5000")
+
+
 class UserRegistrationResource(Resource):
     def post(self):
         data = request.get_json() or {}
-        role = data.get("role") 
+        role = data.get("role")
 
-        if role not in ["buyer", "seller"]:
+        if role not in ["buyer", "seller", "admin"]:
             return {"code": 400, "message": "Invalid or missing role", "status": 0}, 400
 
         required_fields = ["email", "password", "name"]
@@ -40,7 +43,9 @@ class UserRegistrationResource(Resource):
             db.session.add(new_user)
             db.session.commit()
 
+            onboarding_url = None
             if role == "seller":
+                # Create Stripe account
                 account = stripe.Account.create(
                     type="express",
                     email=data["email"],
@@ -48,21 +53,20 @@ class UserRegistrationResource(Resource):
                     country="US",
                     capabilities={
                         "card_payments": {"requested": True},
-                        "transfers": {"requested": True},                    
+                        "transfers": {"requested": True},
                     }
                 )
                 new_user.stripe_account_id = account.id
                 db.session.commit()
 
+                # Create Stripe account onboarding link
                 account_links = stripe.AccountLink.create(
                     account=account.id,
-                    refresh_url="https://example.com/stripe/refresh",
-                    return_url="http://localhost:3000/login",
+                    refresh_url=f"{VITE_API_BASE}/under-verification",
+                    return_url=f"{VITE_API_BASE}/under-verification",
                     type="account_onboarding"
                 )
                 onboarding_url = account_links.url
-            else:
-                onboarding_url = None
 
             access_token = generate_token(new_user.id, new_user.role)
 
@@ -74,6 +78,7 @@ class UserRegistrationResource(Resource):
                     "name": new_user.name,
                     "role": new_user.role,
                     "store_name": new_user.store_name,
+                    "is_approved": new_user.is_approved,  # ✅ ADD THIS
                     "stripe_account_id": new_user.stripe_account_id,
                     "stripe_onboarding_url": onboarding_url
                 },
@@ -87,12 +92,12 @@ class UserRegistrationResource(Resource):
             return {"code": 500, "message": f"Registration failed: {str(e)}", "status": 0}, 500
 
 
-class UserLoginResource(Resource): 
+class UserLoginResource(Resource):
     def post(self):
         data = request.get_json() or {}
-
         email = data.get("email")
         password = data.get("password")
+        role = data.get("role")
 
         if not email or not password:
             return {
@@ -102,12 +107,42 @@ class UserLoginResource(Resource):
             }, 400
 
         user = User.query.filter_by(email=email).first()
+
         if not user or not bcrypt.check_password_hash(user.password_hash, password):
             return {
                 "code": 401,
                 "message": "Invalid credentials",
                 "status": 0
             }, 401
+
+        if not user.is_active:
+            return {
+                "code": 403,
+                "message": "Your account has been blocked by admin.",
+                "status": 0
+            }, 403
+
+        if user.is_deleted:
+            return {
+                "code": 410,
+                "message": "Your account has been deleted.",
+                "status": 0
+            }, 410
+
+        if role and user.role != role:
+            return {
+                "code": 403,
+                "message": f"User does not have {role} access",
+                "status": 0
+            }, 403
+
+        if user.role == "seller" and not user.is_approved:
+            return {
+                "code": 403,
+                "message": "Your seller account is under verification.",
+                "status": 0,
+                "under_verification": True
+            }, 403
 
         access_token = generate_token(user.id, user.role)
 
@@ -119,6 +154,7 @@ class UserLoginResource(Resource):
                 "name": user.name,
                 "role": user.role,
                 "store_name": user.store_name,
+                "is_approved": user.is_approved,  # ✅ Add this!
                 "stripe_account_id": user.stripe_account_id
             },
             "message": "Login successful",
@@ -134,6 +170,9 @@ class UserProfileResource(Resource):
         if not user:
             return {"code": 404, "message": "User not found", "status": 0}, 404
 
+        if user.is_deleted:
+            return {"code": 410, "message": "User account has been deleted", "status": 0}, 410
+
         return {
             "code": 200,
             "data": {
@@ -142,7 +181,8 @@ class UserProfileResource(Resource):
                 "name": user.name,
                 "role": user.role,
                 "store_name": user.store_name,
-                "stripe_account_id": user.stripe_account_id
+                "stripe_account_id": user.stripe_account_id,
+                "is_approved": user.is_approved
             },
             "status": 1
         }, 200
@@ -151,6 +191,9 @@ class UserProfileResource(Resource):
     def put(self, user_id, role):
         user = User.query.get(user_id)
         data = request.get_json() or {}
+
+        if user.is_deleted:
+            return {"code": 410, "message": "User account has been deleted", "status": 0}, 410
 
         if data.get("name"):
             user.name = data["name"]
@@ -170,7 +213,8 @@ class UserProfileResource(Resource):
                     "email": user.email,
                     "name": user.name,
                     "role": user.role,
-                    "store_name": user.store_name
+                    "store_name": user.store_name,
+                    "is_approved": user.is_approved
                 }
             }, 200
         except Exception as e:

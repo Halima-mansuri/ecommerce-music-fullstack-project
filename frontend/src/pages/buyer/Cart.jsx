@@ -26,7 +26,9 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { motion } from 'framer-motion';
-import { FaShoppingCart, FaCreditCard, FaTimesCircle } from 'react-icons/fa';
+import { FaShoppingCart, FaCreditCard, FaInfoCircle } from 'react-icons/fa';
+
+const API_BASE = import.meta.env.VITE_API_BASE;
 
 const MotionBox = motion(Box);
 
@@ -46,7 +48,7 @@ const Cart = () => {
 
   // Colors for dark mode
   const cardBg = useColorModeValue('gray.100', 'gray.700');
-  const textColor = useColorModeValue('purple.700', 'purple.100');
+  const textColor = useColorModeValue('purple.800', 'purple.100');
   const footerBg = useColorModeValue('purple.100', 'gray.700');
   const borderTopColor = useColorModeValue('#eee', 'gray.600');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
@@ -58,7 +60,7 @@ const Cart = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/buyer/cart', {
+      const res = await axios.get(`${API_BASE}/buyer/cart`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCartItems(res.data.data);
@@ -83,7 +85,7 @@ const Cart = () => {
   const handleRemove = async (productId) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/buyer/cart/${productId}`, {
+      await axios.delete(`${API_BASE}/buyer/cart/${productId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -141,7 +143,7 @@ const Cart = () => {
     try {
       const token = localStorage.getItem('token');
       const res = await axios.post(
-        `http://localhost:5000/buyer/apply-coupon`,
+        `${API_BASE}/buyer/apply-coupon`,
         {
           product_id: productId,
           coupon_code: couponCode,
@@ -204,7 +206,7 @@ const Cart = () => {
       });
 
       const res = await axios.post(
-        'http://localhost:5000/buyer/checkout',
+        `${API_BASE}/buyer/checkout`,
         { coupons: couponsPayload },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -251,46 +253,6 @@ const Cart = () => {
     fetchCartItems();
   }, [user]);
 
-  const cancelPendingOrder = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post(
-        'http://localhost:5000/buyer/order/cancel-pending',
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (res.data.status === 1) {
-        toast({
-          title: 'Pending order cancelled successfully.',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-        // Optionally reload cart or reset state
-        fetchCartItems();
-        fetchCartCount();
-      } else {
-        toast({
-          title: res.data.message || 'Cancellation failed.',
-          status: 'error',
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-    } catch (err) {
-      console.error('Error cancelling order:', err);
-      toast({
-        title: 'Error cancelling pending order.',
-        status: 'error',
-        duration: 4000,
-        isClosable: true,
-      });
-    }
-  };
-
   if (loading) {
     return (
       <Center py={20}>
@@ -313,7 +275,7 @@ const Cart = () => {
   const total = calculateTotal();
 
   return (
-    <Box maxW="6xl" mx="auto" px={4} py={6} minH="100vh" display="flex" flexDirection="column">
+    <Box maxW="6xl" mx="auto" px={4} py={6} display="flex" flexDirection="column">
       <Text fontSize="4xl" fontWeight="bold" mb={6} textAlign="center" color={textColor}>
         Your Cart
       </Text>
@@ -337,8 +299,20 @@ const Cart = () => {
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ scale: 1.02 }}
               >
-                <HStack justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={4}>
-                  <VStack align="start" spacing={1} flex="1" minW="250px">
+                <HStack
+                  justifyContent="space-between"
+                  alignItems="flex-start"
+                  flexWrap="wrap"
+                  gap={4}
+                  direction={{ base: 'column', md: 'row' }}
+                >
+                  <VStack
+                    align="start"
+                    spacing={1}
+                    flex="1"
+                    minW={{ base: '100%', md: '250px' }}
+                    width={{ base: '100%', md: 'auto' }}
+                  >
                     <Text color={textColor} fontSize="xl" fontWeight="semibold">
                       {item.title}
                     </Text>
@@ -363,9 +337,14 @@ const Cart = () => {
                     )}
                   </VStack>
 
-                  <VStack spacing={2} minW="220px" flexShrink={0}>
+                  <VStack
+                    spacing={2}
+                    width={{ base: '100%', md: '220px' }}
+                    align="stretch"
+                    flexShrink={0}
+                  >
                     <FormControl isInvalid={!!couponErrors[item.product_id]} width="100%">
-                      <HStack spacing={2} align="start">
+                      <HStack spacing={2} align="start" flexDirection={{ base: 'column', sm: 'row' }}>
                         <Input
                           placeholder="Enter coupon code"
                           value={couponInputs[item.product_id] || ''}
@@ -385,6 +364,7 @@ const Cart = () => {
                           onClick={() => applyCoupon(item.product_id)}
                           isDisabled={appliedCoupons[item.product_id] !== undefined}
                           whiteSpace="nowrap"
+                          width={{ base: '100%', sm: 'auto' }}
                         >
                           {appliedCoupons[item.product_id] ? 'Applied' : 'Apply'}
                         </Button>
@@ -399,6 +379,7 @@ const Cart = () => {
                       leftIcon={<DeleteIcon />}
                       onClick={() => handleRemove(item.product_id)}
                       aria-label={`Remove ${item.title} from cart`}
+                      width="100%"
                     >
                       Remove
                     </Button>
@@ -413,41 +394,64 @@ const Cart = () => {
       {/* Checkout Section */}
 
       <Box
-        position="sticky"
-        bottom="0"
+        mt={8}
         bg={footerBg}
         borderTop="1px"
         borderColor={borderTopColor}
         boxShadow={shadow}
         p={footerPaddingX}
-        zIndex={10}
         borderRadius="xl"
         borderWidth="1px"
-
       >
-        <Flex justifyContent="space-between" alignItems="center" flexWrap="wrap">
-          <Text fontSize="lg" fontWeight="bold" color={textColor}>
-            Total: ${total.toFixed(2)}
-          </Text>
-          <HStack spacing={4} mt={{ base: 2, md: 0 }}>
-            <Button
-              leftIcon={<FaTimesCircle />}
-              colorScheme="red"
-              variant="outline"
-              onClick={cancelPendingOrder}
-            >
-              Cancel Pending Order
-            </Button>
+        <Flex
+          justifyContent={{ base: 'center', md: 'space-between' }}
+          alignItems="center"
+          flexDirection={{ base: 'column', md: 'row' }}
+          flexWrap="wrap"
+          gap={4}
+        >
+          <MotionBox
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            bg="gray.200"
+            border="1px"
+            borderColor="purple.400"
+            px={4}
+            py={3}
+            borderRadius="md"
+            w="100%"
+          >
+            <HStack spacing={2}>
+              <Icon as={FaInfoCircle} color="purple.500" boxSize={5} />
+              <Text color="gray.700" fontSize="sm" fontWeight="medium">
+                <strong>Note:</strong> If checkout fails, cancel order or retry from <strong>Order Details</strong>.
+              </Text>
+            </HStack>
+          </MotionBox>
+
+          <Flex
+            width="100%"
+            justifyContent="space-between"
+            alignItems="center"
+            flexDirection={{ base: 'column', md: 'row' }}
+            gap={4}
+          >
+            <Text fontSize="lg" fontWeight="bold" color={textColor}>
+              Total: ${total.toFixed(2)}
+            </Text>
             <Button
               leftIcon={<FaCreditCard />}
               colorScheme="purple"
               onClick={handleCheckout}
               isLoading={checkoutLoading}
+              width={{ base: '100%', md: 'auto' }}
             >
               Proceed To Checkout
             </Button>
-          </HStack>
+          </Flex>
         </Flex>
+
       </Box>
     </Box>
   );
