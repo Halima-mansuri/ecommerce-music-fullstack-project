@@ -88,7 +88,8 @@ def detect_bpm(file_path: str) -> str:
         import numpy as np
         import librosa
 
-        y, sr = librosa.load(file_path, sr=None)
+        # y, sr = librosa.load(file_path, sr=None) # for development 
+        y, sr = librosa.load(file_path, sr=None, duration=30) # for render
         # Use either beat_track or tempo; both return tempo in different formats
         tempo = librosa.beat.tempo(y=y, sr=sr)  # Returns ndarray
 

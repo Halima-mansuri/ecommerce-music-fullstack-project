@@ -27,7 +27,8 @@ class Config:
 
     # Uploads
     UPLOAD_FOLDER = os.path.join(basedir, "uploads")
-    MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100 MB
+    # MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100 MB for development 
+    MAX_CONTENT_LENGTH = 30 * 1024 * 1024  # 30 MB for render free plan 
 
     # Cloudinary
     CLOUDINARY_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME")
